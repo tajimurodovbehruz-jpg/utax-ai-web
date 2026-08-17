@@ -28,6 +28,40 @@ function CameraFit() {
   return null;
 }
 
+// Ba'zi konteynerlarda (masalan sahifa fonda ochilganda yoki hydration
+// paytida) Canvas'ning ResizeObserver orqali o'lchanishi birinchi kadrda
+// ishlamay qolishi mumkin — canvas standart 300x150 o'lchamda qotib qoladi.
+// Shu holatni tuzatish uchun bir necha kadr davomida konteyner o'lchamini
+// qo'lda tekshirib, kerak bo'lsa sahnani majburan qayta o'lchaymiz.
+function ResizeKick() {
+  const gl = useThree((s) => s.gl);
+  const setSize = useThree((s) => s.setSize);
+  const size = useThree((s) => s.size);
+
+  useEffect(() => {
+    let frame = 0;
+    let raf = 0;
+
+    const tick = () => {
+      const parent = gl.domElement.parentElement;
+      const w = parent?.clientWidth ?? 0;
+      const h = parent?.clientHeight ?? 0;
+      if (w > 0 && h > 0 && (w !== size.width || h !== size.height)) {
+        setSize(w, h);
+        return;
+      }
+      frame += 1;
+      if (frame < 15) raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gl, setSize]);
+
+  return null;
+}
+
 function Desk({ x, z }: { x: number; z: number }) {
   return (
     <group position={[x, 0, z]}>
@@ -139,6 +173,7 @@ export function CampusScene({ reducedMotion, selectedId, lang, onSelect, onState
       <hemisphereLight args={["#ffffff", "#d8dbe6", 0.9]} />
       <directionalLight position={[15, 22, 10]} intensity={1.1} castShadow shadow-mapSize={[1024, 1024]} />
       <CameraFit />
+      <ResizeKick />
 
       <Suspense fallback={null}>
         {/* Floor */}
